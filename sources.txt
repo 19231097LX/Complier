@@ -8,4 +8,4 @@
 ./src/miniSysYLexer.java
 ./src/miniSysYListener.java
 ./src/miniSysYParser.java
-./src/miniSysYVistor.java
+./src/miniSysYVisitor.java
