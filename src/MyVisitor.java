@@ -132,9 +132,9 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 String reg = this.regSign + register++;
                 String tmp;
                 if (ctx.ADD() != null) {
-                    tmp = "  " + reg + " = add i32 " + lhs + ", " + rhs + "\n";
+                    tmp = "    " + reg + " = add i32 " + lhs + ", " + rhs + "\n";
                 } else {
-                    tmp = "  " + reg + " = sub i32 " + lhs + ", " + rhs + "\n";
+                    tmp = "    " + reg + " = sub i32 " + lhs + ", " + rhs + "\n";
                 }
                 this.content += tmp;
                 return reg;
@@ -151,13 +151,13 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 String reg = this.regSign + register++;
                 String tmp;
                 if (ctx.MUL() != null) {
-                    tmp = "  " + reg + " = mul i32 " + lhs + ", " + rhs + "\n";
+                    tmp = "    " + reg + " = mul i32 " + lhs + ", " + rhs + "\n";
                 } else if (ctx.DIV() != null) {
-                    tmp = "  " + reg + " = sdiv i32 " + lhs + ", " + rhs + "\n";
+                    tmp = "    " + reg + " = sdiv i32 " + lhs + ", " + rhs + "\n";
                 }
                 // MOD 运算
                 else {
-                    tmp = "  " + reg + " = srem i32 " + lhs + ", " + rhs + "\n";
+                    tmp = "    " + reg + " = srem i32 " + lhs + ", " + rhs + "\n";
                 }
                 this.content += tmp;
                 return reg;
@@ -177,7 +177,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
 //            tmp.setRegister(reg);
             if (!tmp.isInit()) tmp.setInit(true);
             //输出llvm代码！
-            llvm = "  store i32 " + expReg + ", i32* " + tmp.register + "\n";
+            llvm = "    store i32 " + expReg + ", i32* " + tmp.register + "\n";
             this.content += llvm;
         } else System.exit(5);
         return null;
@@ -193,7 +193,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         String ret = visit(ctx.unaryExp());
         if (ctx.sign.getType() == miniSysYParser.SUB) {
             String reg = this.regSign + register++;
-            String tmp = "  " + reg + " = sub i32 0, " + ret + "\n";
+            String tmp = "    " + reg + " = sub i32 0, " + ret + "\n";
             this.content += tmp;
             return reg;
         }
@@ -216,7 +216,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             if (func.retType.equals("void")) content += ("  "+tmp);
             else{
                 String reg = this.regSign + register++;
-                content +=  ("  "+reg +" = ");
+                content +=  ("    "+reg +" = ");
                 content += tmp;
                 return reg;
             }
@@ -245,7 +245,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             String newReg = this.regSign + this.register++;
             //准备新寄存器 %3 = load i32, i32* %1
             //输出llvm代码！
-            llvm = "  "+newReg+" = load i32, i32* " + tmp.getRegister() + "\n";
+            llvm = "    "+newReg+" = load i32, i32* " + tmp.getRegister() + "\n";
             this.content += llvm;
             return newReg;
         } else System.exit(5);
@@ -271,7 +271,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         if (!this.mapTable.get(this.tablePtr).containsKey(IdentName) && !this.mapTable.get(0).containsKey(IdentName) ) {
             String newReg = this.regSign + this.register++;
             //输出llvm代码alloca
-            llvm= "  "+newReg + " = alloca i32\n";
+            llvm= "    "+newReg + " = alloca i32\n";
             this.content += llvm;
             //i32 or int?
             tmp = new Item(IdentName,newReg,true,true,"i32");
@@ -280,7 +280,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             this.mapTable.get(this.tablePtr).put(IdentName,tmp);
             //输出llvm代码store
             String expReg = visit(ctx.constInitVal());
-            llvm = "  store i32 " + expReg + ", i32* " + newReg + "\n";
+            llvm = "    store i32 " + expReg + ", i32* " + newReg + "\n";
             this.content += llvm;
         } else System.exit(4);
         return null;
@@ -309,14 +309,14 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             if(ctx.initVal()!= null){
                 newReg = this.regSign + this.register++;
                 //输出llvm代码alloca
-                llvm= "  "+newReg + " = alloca i32\n";
+                llvm= "    "+newReg + " = alloca i32\n";
                 this.content += llvm;
                 tmp = new Item(IdentName,newReg,false,true,"i32");
                 tmp.setInit(true);
                 this.mapTable.get(this.tablePtr).put(IdentName,tmp);
                 String expReg = visit(ctx.initVal());
                 //输出llvm代码store
-                llvm = "  store i32 " + expReg + ", i32* " + newReg + "\n";
+                llvm = "    store i32 " + expReg + ", i32* " + newReg + "\n";
                 this.content += llvm;
                 //add item
             }
@@ -326,7 +326,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 tmp.setInit(false);
                 this.mapTable.get(this.tablePtr).put(IdentName,tmp);
                 //输出llvm代码alloca
-                llvm= "  "+newReg + " = alloca i32\n";
+                llvm= "    "+newReg + " = alloca i32\n";
                 this.content += llvm;
             }
 

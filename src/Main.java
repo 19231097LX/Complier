@@ -7,6 +7,7 @@ public class Main {
     public static void main(String[] args) throws IOException {
         String a = "src/input.txt";
         String b="src/output.txt";
+        //args[0]
         CharStream inputStream = CharStreams.fromFileName(args[0]); // 获取输入流
         miniSysYLexer lexer = new miniSysYLexer(inputStream);//词法分析器
         CommonTokenStream tokenStream = new CommonTokenStream(lexer); // 获取词法分析 token 流
@@ -18,6 +19,7 @@ public class Main {
         MyVisitor visitor = new MyVisitor();
 //        visitor.init(args[1]);
         visitor.visit(tree);
+        //args[1]
         FileWriter fw = new FileWriter(args[1]);
         fw.write(visitor.getContent());
         fw.close();
