@@ -1,6 +1,8 @@
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
+
 import java.io.*;
 
 public class Main {
@@ -16,6 +18,7 @@ public class Main {
         parser.removeErrorListeners();
         parser.addErrorListener(el);
         miniSysYParser.CompUnitContext tree = parser.compUnit();
+//        System.out.println(tree.toStringTree(parser)); // 打印字符串形式的语法树
         MyVisitor visitor = new MyVisitor();
 //        visitor.init(args[1]);
         visitor.visit(tree);
@@ -23,7 +26,5 @@ public class Main {
         FileWriter fw = new FileWriter(args[1]);
         fw.write(visitor.getContent());
         fw.close();
-//        ParseTree tree = parser.compUnit(); // 获取语法树的根节点
-//        System.out.println(tree.toStringTree(parser)); // 打印字符串形式的语法树
     }
 }

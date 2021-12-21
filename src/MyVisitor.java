@@ -5,9 +5,10 @@ import java.util.HashMap;
 //4——声明变量已存在   5——引用变量不存在  6——变量赋值类型不符合  7——调用函数不存在
 public class MyVisitor extends miniSysYBaseVisitor<String>{
     public int register = 1;//寄存器编号
+    public String libFuncDecl = "";//库函数声明输出内容
     public String regSign = "%";//局部变量符号
     public String content = "";//编译器输出内容
-    public String retType;//函数返回值类型
+    public String retType;//用于递归分析时记录当前函数返回值类型
 
     //为了实现符号表的作用范围，使用arrayList来存储所有符号表，符号表本身用hashmap存储
     public ArrayList<HashMap<String, Item>> mapTable = new ArrayList<>();
@@ -25,10 +26,14 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         MyFunction putint = new MyFunction("putint", true, true, "void");
         MyFunction getch = new MyFunction("getch", true, false, "i32");
         MyFunction putch = new MyFunction("putch", true, true, "void");
+        MyFunction getarray = new MyFunction("getarray", true, false, "i32");
+        MyFunction putarray = new MyFunction("putarray", true, true, "void");
         libFunctions.put("getint", getint);
         libFunctions.put("putint", putint);
         libFunctions.put("getch", getch);
         libFunctions.put("putch", putch);
+        libFunctions.put("getarray", getarray);
+        libFunctions.put("putarray", putarray);
     }
     //编译器输出llvm
     public String getContent() {
@@ -37,21 +42,27 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     }
     @Override
     public String visitCompUnit(miniSysYParser.CompUnitContext ctx) {
+        System.out.println("visitCompUnit");
         visitChildren(ctx);
         return null;
     }
 
     @Override
     public String visitFuncDef(miniSysYParser.FuncDefContext ctx) {
+        System.out.println("visitFuncDef");
         //处理库函数声明
         String getint = "declare i32 @getint()\n";
         String getch = "declare i32 @getch()\n";
         String putint = "declare void @putint(i32)\n";
         String putch = "declare void @putch(i32)\n";
-//        this.content += getint;
-//        this.content += getch;
-//        this.content += putint;
-//        this.content += putch;
+        String getarray = "declare i32 @getarray()\n";
+        String putarray = "declare void @putarray(i32)\n";
+        this.content += getint;
+        this.content += getch;
+        this.content += getarray;
+        this.content += putint;
+        this.content += putch;
+        this.content += putarray;
 
         //处理本函数
         String tmp = "define dso_local ";
@@ -64,6 +75,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
 
     @Override
     public String visitFuncType(miniSysYParser.FuncTypeContext ctx) {
+        System.out.println("visitFuncType");
         String type = "";
         if (ctx.INT() != null) {
             type += "i32";
@@ -74,6 +86,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
 
     @Override
     public String visitBlock(miniSysYParser.BlockContext ctx) {
+        System.out.println("visitBlock");
         this.content += "{\n";
         visitChildren(ctx);
         this.content += "}";
@@ -82,23 +95,27 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
 
     @Override
     public String visitBlockItem(miniSysYParser.BlockItemContext ctx) {
+        System.out.println("visitBlockItem");
         return visitChildren(ctx);
     }
 
     @Override
     public String visitStmt(miniSysYParser.StmtContext ctx) {
+        System.out.println("visitStmt");
         return visitChildren(ctx);
     }
 
     @Override
     public String visitRetStatement(miniSysYParser.RetStatementContext ctx) {
+        System.out.println("visitRetStatement");
         String tmp = "    ret " + this.retType +" "+ visit(ctx.exp()) + "\n";
         this.content += tmp;
         return null;
     }
-    //处理member
+    //处理number
     @Override
     public String visitNum(miniSysYParser.NumContext ctx) {
+        System.out.println("visitNum");
         String num = ctx.Number().getText();
         int rnum = 0;
         if (num.charAt(0) == '0' && num.length() >1 ) {
@@ -113,16 +130,19 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     }
     @Override
     public String visitExpStatement(miniSysYParser.ExpStatementContext ctx) {
+        System.out.println("visitExpStatement");
         return visitChildren(ctx);
     }
 
     @Override
     public String visitExp(miniSysYParser.ExpContext ctx) {
+        System.out.println("visitExp");
         return visitChildren(ctx);
     }
 
     @Override
     public String visitAddExp(miniSysYParser.AddExpContext ctx) {
+        System.out.println("visitAddExp");
         switch (ctx.children.size()) {
             case 1:
                 return visitChildren(ctx);
@@ -142,6 +162,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     }
     @Override
     public String visitMulExp(miniSysYParser.MulExpContext ctx) {
+        System.out.println("visitMulExp");
         switch (ctx.children.size()) {
             case 1:
                 return visitChildren(ctx);
@@ -166,6 +187,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
 
     @Override
     public String visitAssignStatement(miniSysYParser.AssignStatementContext ctx) {
+        System.out.println("visitAssignStatement");
         String lval = ctx.lVal().getText();
         String expReg = visit(ctx.exp());
         Item tmp = this.mapTable.get(this.tablePtr).get(lval);
@@ -184,12 +206,14 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     }
     @Override
     public String visitPriE(miniSysYParser.PriEContext ctx) {
+        System.out.println("visitPriE");
         return visitChildren(ctx);
     }
 
-    //处理二元+-
+    //专门用于处理二元+-,只有UnaryOpExp的标识符为-才分配寄存器返回。否则返回对子节点的访问结果。
     @Override
     public String visitUnaryOpExp(miniSysYParser.UnaryOpExpContext ctx) {
+        System.out.println("visitUnaryOpExp");
         String ret = visit(ctx.unaryExp());
         if (ctx.sign.getType() == miniSysYParser.SUB) {
             String reg = this.regSign + register++;
@@ -202,6 +226,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     //处理调用的库函数
     @Override
     public String visitLibfunc(miniSysYParser.LibfuncContext ctx) {
+        System.out.println("visitLibfunc");
         String libfunc = ctx.Ident().getText();
         //仅能调用存在的库函数
         String tmp, para = "";
@@ -213,7 +238,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 para += ("i32 " + expReg);
             }
             tmp = "call " + func.retType + " @" + libfunc + "(" + para + ")\n";
-            if (func.retType.equals("void")) content += ("  "+tmp);
+            if (func.retType.equals("void")) content += ("    "+tmp);
             else{
                 String reg = this.regSign + register++;
                 content +=  ("    "+reg +" = ");
@@ -228,15 +253,20 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     }
 
     @Override
-    public String visitFuncRParams(miniSysYParser.FuncRParamsContext ctx) { return visitChildren(ctx); }
+    public String visitFuncRParams(miniSysYParser.FuncRParamsContext ctx) {
+        System.out.println("visitFuncRParams");
+        return visitChildren(ctx);
+    }
 
     @Override
     public String visitBraces(miniSysYParser.BracesContext ctx) {
+        System.out.println("visitBraces");
         return visit(ctx.exp());
     }
 
     @Override
     public String visitLVal(miniSysYParser.LValContext ctx) {
+        System.out.println("visitLVal");
         String lval = ctx.getText();
         Item tmp = this.mapTable.get(this.tablePtr).get(lval);
         String llvm;
@@ -253,17 +283,25 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     }
 
     @Override
-    public String visitDecl(miniSysYParser.DeclContext ctx) { return visitChildren(ctx); }
+    public String visitDecl(miniSysYParser.DeclContext ctx) {
+        System.out.println("visitDecl");
+        return visitChildren(ctx);
+    }
 
     @Override
     public String visitConstDecl(miniSysYParser.ConstDeclContext ctx) {
+        System.out.println("visitConstDecl");
         return visitChildren(ctx); }
 
     @Override
-    public String visitBType(miniSysYParser.BTypeContext ctx) { return visitChildren(ctx); }
+    public String visitBType(miniSysYParser.BTypeContext ctx) {
+        System.out.println("visitBType");
+        return visitChildren(ctx);
+    }
     //先检查全局表内是否存在同名变量 再存
     @Override
     public String visitConstDef(miniSysYParser.ConstDefContext ctx) {
+        System.out.println("visitConstDef");
         String IdentName = ctx.Ident().getText();
         Item tmp;
         String llvm;
@@ -287,16 +325,26 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     }
 
     @Override
-    public String visitConstInitVal(miniSysYParser.ConstInitValContext ctx) { return visitChildren(ctx); }
+    public String visitConstInitVal(miniSysYParser.ConstInitValContext ctx) {
+        System.out.println("visitConstInitVal");
+        return visitChildren(ctx);
+    }
 
     @Override
-    public String visitConstExp(miniSysYParser.ConstExpContext ctx) { return visitChildren(ctx); }
+    public String visitConstExp(miniSysYParser.ConstExpContext ctx) {
+        System.out.println("visitConstExp");
+        return visitChildren(ctx);
+    }
 
     @Override
-    public String visitVarDecl(miniSysYParser.VarDeclContext ctx) { return visitChildren(ctx); }
+    public String visitVarDecl(miniSysYParser.VarDeclContext ctx) {
+        System.out.println("visitVarDecl");
+        return visitChildren(ctx);
+    }
 
     @Override
     public String visitVarDef(miniSysYParser.VarDefContext ctx) {
+        System.out.println("visitVarDef");
         String IdentName = ctx.Ident().getText();
 //        String expReg = visit(ctx.initVal());
         Item tmp;
@@ -334,5 +382,8 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         return null; }
 
     @Override
-    public String visitInitVal(miniSysYParser.InitValContext ctx) { return visitChildren(ctx); }
+    public String visitInitVal(miniSysYParser.InitValContext ctx) {
+        System.out.println("visitInitVal");
+        return visitChildren(ctx);
+    }
 }
