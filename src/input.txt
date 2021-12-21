@@ -1,10 +1,11 @@
 int main() {
-    int a = getch(), b;
-    b = getch();
-    putch(a);
-    putch(b);
-    putch(10);
-    putch(a - 16);
-    putch(b + 6);
+    int a = getint();
+    int b = getint();
+    if (a <= b) {
+        putint(1);
+    }
+    else {
+        putint(0);
+    }
     return 0;
 }

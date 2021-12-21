@@ -6,7 +6,7 @@ funcDef  : funcType Ident L_PAREN R_PAREN block;
 funcType : INT;
 block    : L_BRACE blockItem* R_BRACE;
 blockItem : stmt | decl;
-stmt     : retStatement|assignStatement|expStatement|condStatement;
+stmt     : retStatement|assignStatement|expStatement|condStatement|block;
 retStatement:RETURN exp SEMICOLON;
 assignStatement:lVal ASSIGN exp SEMICOLON;
 decl         : constDecl | varDecl;
