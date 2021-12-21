@@ -5,7 +5,6 @@ import java.util.HashMap;
 //4——声明变量已存在   5——引用变量不存在  6——变量赋值类型不符合  7——调用函数不存在
 public class MyVisitor extends miniSysYBaseVisitor<String>{
     public int register = 1;//寄存器编号
-    public String libFuncDecl = "";//库函数声明输出内容
     public String regSign = "%";//局部变量符号
     public String content = "";//编译器输出内容
     public String retType;//用于递归分析时记录当前函数返回值类型
@@ -21,7 +20,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         //初始化第一张符号表
         this.mapTable.add(new HashMap<String, Item>());
         //初始化库函数对应调用语句
-        //不处理括号ver
         MyFunction getint = new MyFunction("getint", true, false, "i32");
         MyFunction putint = new MyFunction("putint", true, true, "void");
         MyFunction getch = new MyFunction("getch", true, false, "i32");
@@ -34,6 +32,18 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         libFunctions.put("putch", putch);
         libFunctions.put("getarray", getarray);
         libFunctions.put("putarray", putarray);
+        String Sgetint = "declare i32 @getint()\n";
+        String Sgetch = "declare i32 @getch()\n";
+        String Sputint = "declare void @putint(i32)\n";
+        String Sputch = "declare void @putch(i32)\n";
+        String Sgetarray = "declare i32 @getarray()\n";
+        String Sputarray = "declare void @putarray(i32)\n";
+        this.content += Sgetint;
+        this.content += Sgetch;
+        this.content += Sgetarray;
+        this.content += Sputint;
+        this.content += Sputch;
+        this.content += Sputarray;
     }
     //编译器输出llvm
     public String getContent() {
@@ -50,21 +60,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     @Override
     public String visitFuncDef(miniSysYParser.FuncDefContext ctx) {
         System.out.println("visitFuncDef");
-        //处理库函数声明
-        String getint = "declare i32 @getint()\n";
-        String getch = "declare i32 @getch()\n";
-        String putint = "declare void @putint(i32)\n";
-        String putch = "declare void @putch(i32)\n";
-        String getarray = "declare i32 @getarray()\n";
-        String putarray = "declare void @putarray(i32)\n";
-        this.content += getint;
-        this.content += getch;
-        this.content += getarray;
-        this.content += putint;
-        this.content += putch;
-        this.content += putarray;
-
-        //处理本函数
         String tmp = "define dso_local ";
         tmp += visit(ctx.funcType());
         tmp += (" @" + ctx.Ident().getText() + "(" + ")");
@@ -229,11 +224,11 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         System.out.println("visitLibfunc");
         String libfunc = ctx.Ident().getText();
         //仅能调用存在的库函数
-        String tmp, para = "";
+        String tmp, para = "";//参数字符串
         MyFunction func = this.libFunctions.get(libfunc);
         //函数存在
         if (func != null) {
-            if (func.para){
+            if (func.para){//是否含有参数
                 String expReg = visit(ctx.funcRParams());
                 para += ("i32 " + expReg);
             }
@@ -248,7 +243,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             return tmp;
         }
         else System.exit(7);
-
         return visitChildren(ctx);
     }
 
@@ -273,8 +267,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         //先确认目标存在且已经有初始化值
         if (tmp != null && tmp.init) {
             String newReg = this.regSign + this.register++;
-            //准备新寄存器 %3 = load i32, i32* %1
-            //输出llvm代码！
             llvm = "    "+newReg+" = load i32, i32* " + tmp.getRegister() + "\n";
             this.content += llvm;
             return newReg;
@@ -311,10 +303,8 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             //输出llvm代码alloca
             llvm= "    "+newReg + " = alloca i32\n";
             this.content += llvm;
-            //i32 or int?
             tmp = new Item(IdentName,newReg,true,true,"i32");
             tmp.setInit(true);
-            //0？
             this.mapTable.get(this.tablePtr).put(IdentName,tmp);
             //输出llvm代码store
             String expReg = visit(ctx.constInitVal());
@@ -352,8 +342,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         //先确认目标不存在 这里是为了区分以后的全局变量和局部变量都不重名
         if (!this.mapTable.get(this.tablePtr).containsKey(IdentName) && !this.mapTable.get(0).containsKey(IdentName) ) {
             String newReg;
-            //i32 or int?
-            //判断是否初始化
+            //判断是否要进行初始化
             if(ctx.initVal()!= null){
                 newReg = this.regSign + this.register++;
                 //输出llvm代码alloca

@@ -2,7 +2,7 @@
 public class Item {
     public String name;//表项内容
     public String register;//所存寄存器
-    public boolean cons;
+    public boolean cons;//是否为常量
     public boolean init;//是否初始化
     public String type;//数据类型
 
