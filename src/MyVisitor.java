@@ -5,9 +5,12 @@ import java.util.HashMap;
 //4——声明变量已存在   5——引用变量不存在  6——变量赋值类型不符合  7——调用函数不存在
 public class MyVisitor extends miniSysYBaseVisitor<String>{
     public int register = 1;//寄存器编号
-    public String regSign = "%";//局部变量符号
+    public String regSign = "%";//寄存器局部变量符号
     public String content = "";//编译器输出内容
     public String retType;//用于递归分析时记录当前函数返回值类型
+    public int block = 1;//用于基本的编号
+    private int type=32;//用于判断是否需要在判断cond时候将i32转换为i1
+    private boolean returned=false;//用于辅助判断条件跳转的输出
 
     //为了实现符号表的作用范围，使用arrayList来存储所有符号表，符号表本身用hashmap存储
     public ArrayList<HashMap<String, Item>> mapTable = new ArrayList<>();
@@ -62,9 +65,10 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         System.out.println("visitFuncDef");
         String tmp = "define dso_local ";
         tmp += visit(ctx.funcType());
-        tmp += (" @" + ctx.Ident().getText() + "(" + ")");
+        tmp += (" @" + ctx.Ident().getText() + "(" + "){\n");
         this.content += tmp;
         visit(ctx.block());
+        this.content += "}\n";
         return null;
     }
 
@@ -82,9 +86,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     @Override
     public String visitBlock(miniSysYParser.BlockContext ctx) {
         System.out.println("visitBlock");
-        this.content += "{\n";
         visitChildren(ctx);
-        this.content += "}";
         return null;
     }
 
@@ -105,6 +107,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         System.out.println("visitRetStatement");
         String tmp = "    ret " + this.retType +" "+ visit(ctx.exp()) + "\n";
         this.content += tmp;
+        this.returned = true;
         return null;
     }
     //处理number
@@ -193,7 +196,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
 //            reg = this.regSign + register++;
 //            tmp.setRegister(reg);
             if (!tmp.isInit()) tmp.setInit(true);
-            //输出llvm代码！
             llvm = "    store i32 " + expReg + ", i32* " + tmp.register + "\n";
             this.content += llvm;
         } else System.exit(5);
@@ -215,6 +217,15 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             String tmp = "    " + reg + " = sub i32 0, " + ret + "\n";
             this.content += tmp;
             return reg;
+        }
+        else if (ctx.sign.getType() == miniSysYParser.NOT){
+            String reg = this.regSign + register++;
+            String tmp = "    " + reg + " = icmp eq i32 " + ret + ",0\n";
+            this.content += tmp;
+            String reg2 = this.regSign + register++;
+            String tmp2 = "    " + reg2 + " = zext i1 " + reg + ",0\n";
+            this.content += tmp2;
+            return reg2;
         }
         return ret;
     }
@@ -373,6 +384,159 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     @Override
     public String visitInitVal(miniSysYParser.InitValContext ctx) {
         System.out.println("visitInitVal");
+        return visitChildren(ctx);
+    }
+    @Override
+    public String visitRelExp(miniSysYParser.RelExpContext ctx) {
+        System.out.println("visitRelExp");
+        System.out.println(ctx.children.size());
+        switch (ctx.children.size()) {
+            case 1:
+                return visitChildren(ctx);
+            default:
+                String lhs = visit(ctx.relExp());
+                String rhs = visit(ctx.addExp());
+                String reg = this.regSign + register++;
+                String tmp = "";
+                if(ctx.sign.getType() == miniSysYParser.GR){
+                    tmp = "    " + reg + " = icmp sgt i32 " + lhs + ", " + rhs + "\n";
+                }
+                else if (ctx.sign.getType() == miniSysYParser.LR){
+                    tmp = "    " + reg + " = icmp slt i32 " + lhs + ", " + rhs + "\n";
+                }
+                else if (ctx.sign.getType() == miniSysYParser.LE){
+                    tmp = "    " + reg + " = icmp sle i32 " + lhs + ", " + rhs + "\n";
+                }
+                else if(ctx.sign.getType() == miniSysYParser.GE){
+                    tmp = "    " + reg + " = icmp sge i32 " + lhs + ", " + rhs + "\n";
+                }
+                this.content += tmp;
+                this.type = 1;
+                return reg;
+        }
+    }
+
+    @Override
+    public String visitEqExp(miniSysYParser.EqExpContext ctx) {
+        System.out.println("visitEqExp");
+        switch (ctx.children.size()) {
+            case 1:
+                return visitChildren(ctx);
+            default:
+                String lhs = visit(ctx.eqExp());
+                String rhs = visit(ctx.relExp());
+                String reg = this.regSign + register++;
+                String tmp = "";
+                if(ctx.sign.getType() == miniSysYParser.EQUAL){
+                    tmp = "    " + reg + " = icmp eq i32 " + lhs + ", " + rhs + "\n";
+                }
+                else if (ctx.sign.getType() == miniSysYParser.NOTEQUAL){
+                    tmp = "    " + reg + " = icmp ne i32 " + lhs + ", " + rhs + "\n";
+                }
+                this.content += tmp;
+                this.type = 1;
+                return reg;
+        }
+    }
+    @Override
+    public String visitLAndExp(miniSysYParser.LAndExpContext ctx) {
+        System.out.println("visitLAndExp");
+        switch (ctx.children.size()) {
+            case 1:
+                return visitChildren(ctx);
+            default:
+                String lhs = visit(ctx.lAndExp());
+                String rhs = visit(ctx.eqExp());
+                String reg = this.regSign + register++;
+                String tmp = "";
+                tmp = "    " + reg + " = and i1 " + lhs + ", " + rhs + "\n";
+                this.content += tmp;
+                return reg;
+        }
+    }
+
+    //TODO
+    @Override
+    public String visitLOrExp(miniSysYParser.LOrExpContext ctx) {
+        System.out.println("visitLOrExp");
+        switch (ctx.children.size()) {
+            case 1:
+                return visitChildren(ctx);
+            default:
+                String lhs = visit(ctx.lOrExp());
+                String rhs = visit(ctx.lAndExp());
+                String reg = this.regSign + register++;
+                String tmp = "";
+                tmp = "    " + reg + " = or i1 " + lhs + ", " + rhs + "\n";
+                this.content += tmp;
+                return reg;
+        }
+    }
+    @Override public String visitCondStatement(miniSysYParser.CondStatementContext ctx) {
+        System.out.println("visitCondStatement");
+        int ifBlock;
+        int deBlock;
+        String llvm;
+        String reg;
+        System.out.println("childrenSize:"+ctx.children.size());
+        if (ctx.children.size() == 5) {
+            String condReg = visit(ctx.cond());
+            System.out.println("childrenSize:"+ctx.children.size());
+            ifBlock=++block;
+            deBlock=++block;
+            if(this.type==32){
+                reg = this.regSign + register++;
+                llvm = "    " + reg + " = icmp ne i32 " + condReg + ",0\n";
+                this.content += llvm;
+            }
+            else {
+                reg = condReg;
+            }
+            this.type=32;
+            this.content +="    br i1 " +reg+ ",label %b" +ifBlock+ ",label %b" +deBlock+ "\n";
+            this.content +="b" +ifBlock+ ":\n";
+            visit(ctx.children.get(4));
+            if(!returned){
+                this.content +="    br label %b" +deBlock+ "\n";
+            }
+            returned = false;
+            this.content +="b" +deBlock+ ":\n";
+            return null;
+        }
+        else if(ctx.children.size() == 7){
+            String condReg = visit(ctx.cond());
+            ifBlock=++block;
+            int elseBlock=++block;
+            deBlock=++block;
+            if(this.type==32){
+                reg = this.regSign + register++;
+                llvm = "    " + reg + " = icmp ne i32 " + condReg + ",0\n";
+                this.content += llvm;
+            }
+            else {
+                reg = condReg;
+            }
+            this.type=32;
+            this.content +="    br i1 " +reg+ ",label %b" +ifBlock+ ",label %b" +elseBlock+ "\n";
+            this.content +="b" +ifBlock+ ":\n";
+            visit(ctx.children.get(4));
+            if(!returned){
+                this.content +="    br label %b" +deBlock+ "\n";
+            }
+            returned = false;
+            this.content +="b" +elseBlock+ ":\n";
+            visit(ctx.children.get(6));
+            if(!returned){
+                this.content +="    br label %b" +deBlock+ "\n";
+            }
+            returned = false;
+            this.content +="b" +deBlock+ ":\n";
+            return null;
+        }
+        else return null;
+    }
+    @Override public String visitCond(miniSysYParser.CondContext ctx) {
+        System.out.println("visitCond");
         return visitChildren(ctx);
     }
 }

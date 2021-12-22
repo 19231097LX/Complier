@@ -1,11 +1,12 @@
 int main() {
-    int a = getint();
-    int b = getint();
-    if (a <= b) {
-        putint(1);
+    int a;
+    a = 10;
+    if (+-!!!a) {
+        a = - - -1;
     }
     else {
-        putint(0);
+        a = 0;
     }
+    putint(a);
     return 0;
 }
