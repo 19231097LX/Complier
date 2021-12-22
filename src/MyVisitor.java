@@ -223,7 +223,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             String tmp = "    " + reg + " = icmp eq i32 " + ret + ",0\n";
             this.content += tmp;
             String reg2 = this.regSign + register++;
-            String tmp2 = "    " + reg2 + " = zext i1 " + reg + ",0\n";
+            String tmp2 = "    " + reg2 + " = zext i1 " + reg + " to i32\n";
             this.content += tmp2;
             return reg2;
         }
