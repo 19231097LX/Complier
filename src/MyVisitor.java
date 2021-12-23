@@ -128,10 +128,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             if ( num.charAt(1) == 'x' || num.charAt(1) == 'X') rnum = Integer.valueOf(num.substring(2), 16);
             else rnum = Integer.valueOf(num.substring(1), 8);
         } else rnum = Integer.valueOf(num, 10);
-//        int reg = register++;
-//        this.content += regSign + reg +"= alloca i32";
-//        this.content += "store i32 " + rnum + ", i32*" + regSign + reg;
-//        return reg;}
         return String.valueOf(rnum);
     }
     @Override
@@ -229,7 +225,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     public String visitAssignStatement(miniSysYParser.AssignStatementContext ctx) {
         System.out.println("visitAssignStatement");
         String lval = ctx.lVal().getText();
-        String expReg = visit(ctx.exp());
         //从此层对应的符号表开始循环遍历之前的层直到找到对应的Item
         Item tmp = null;
         for(int i=this.tablePtr;i>=0;i--){
@@ -237,14 +232,21 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             if(tmp != null) break;
         }
         String llvm;
-        String reg;
+        //TODO 处理给全局变量赋值。
         //先确认目标存在且不为常量
         if (tmp != null && !tmp.cons) {
-//            reg = this.regSign + register++;
-//            tmp.setRegister(reg);
             if (!tmp.isInit()) tmp.setInit(true);
-            llvm = "    store i32 " + expReg + ", i32* " + tmp.register + "\n";
-            this.content += llvm;
+            if(tmp.getRegister().charAt(0) == '%') {
+                String expReg = visit(ctx.exp());
+                llvm = "    store i32 " + expReg + ", i32* " + tmp.register + "\n";
+                this.content += llvm;
+            }
+            else {
+                String expReg = visit(ctx.exp());
+                llvm = "    store i32 " + expReg + ", i32* @" + tmp.name + "\n";
+                this.content += llvm;
+                tmp.register = expReg;
+            }
         } else System.exit(5);
         return null;
     }
@@ -399,7 +401,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 tmp = new Item(IdentName, newReg, true, true, "i32");
                 tmp.setInit(true);
                 this.mapTable.get(this.tablePtr).put(IdentName, tmp);
-                //输出llvm代码store
                 String expReg = visit(ctx.constInitVal());
                 llvm = "    store i32 " + expReg + ", i32* " + newReg + "\n";
                 this.content += llvm;
@@ -470,7 +471,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                     tmp.setInit(true);
                     this.mapTable.get(this.tablePtr).put(IdentName, tmp);
                     String expReg = visit(ctx.initVal());
-                    //输出llvm代码store
                     llvm = "    store i32 " + expReg + ", i32* " + newReg + "\n";
                     this.content += llvm;
                     //add item
