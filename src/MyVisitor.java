@@ -245,7 +245,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 String expReg = visit(ctx.exp());
                 llvm = "    store i32 " + expReg + ", i32* @" + tmp.name + "\n";
                 this.content += llvm;
-                tmp.register = expReg;
             }
         } else System.exit(5);
         return null;
