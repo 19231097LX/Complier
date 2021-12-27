@@ -677,7 +677,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             String condReg2 = visit(ctx.cond());
             if(this.type==32){
                 reg = this.regSign + register++;
-                llvm = "    " + reg + " = icmp ne i32 " + condReg + ",0\n";
+                llvm = "    " + reg + " = icmp ne i32 " + condReg2 + ",0\n";
                 this.content += llvm;
             }
             else {
