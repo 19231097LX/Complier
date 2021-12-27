@@ -14,6 +14,8 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     public int block = 1;//用于基本的编号
     private int type=32;//用于判断是否需要在判断cond时候将i32转换为i1
     private boolean returned=false;//用于辅助判断条件跳转的输出
+    private boolean isBreak=false;//用于辅助判断条件跳转的输出
+    private boolean isContinue=false;//用于辅助判断条件跳转的输出
     private boolean isSettingGlobal = false;
 
     //为了实现符号表的作用范围，使用arrayList来存储所有符号表，符号表本身用hashmap存储
@@ -605,10 +607,10 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             this.content +="    br i1 " +reg+ ",label %b" +ifBlock+ ",label %b" +deBlock+ "\n";
             this.content +="b" +ifBlock+ ":\n";
             visit(ctx.children.get(4));
-            if(!returned){
+            if(!returned&&!isBreak&&!isContinue){
                 this.content +="    br label %b" +deBlock+ "\n";
             }
-            returned = false;
+            returned = false;isBreak=false;isContinue=false;
             this.content +="b" +deBlock+ ":\n";
             return null;
         }
@@ -629,16 +631,16 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             this.content +="    br i1 " +reg+ ",label %b" +ifBlock+ ",label %b" +elseBlock+ "\n";
             this.content +="b" +ifBlock+ ":\n";
             visit(ctx.children.get(4));
-            if(!returned){
+            if(!returned&&!isBreak&&!isContinue){
                 this.content +="    br label %b" +deBlock+ "\n";
             }
-            returned = false;
+            returned = false;isBreak=false;isContinue=false;
             this.content +="b" +elseBlock+ ":\n";
             visit(ctx.children.get(6));
-            if(!returned){
+            if(!returned&&!isBreak&&!isContinue){
                 this.content +="    br label %b" +deBlock+ "\n";
             }
-            returned = false;
+            returned = false;isBreak=false;isContinue=false;
             this.content +="b" +deBlock+ ":\n";
             return null;
         }
@@ -699,6 +701,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         if(breakTos.size()==0)
             System.exit(8);
         this.content +="    br label %b" +breakTos.get(breakTos.size()-1)+ "\n";
+        this.isBreak=true;
         return null;
     }
     @Override
@@ -707,6 +710,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         if(continueTos.size()==0)
             System.exit(8);
         this.content +="    br label %b" +continueTos.get(continueTos.size()-1)+ "\n";
+        this.isContinue=true;
         return null;
     }
 }

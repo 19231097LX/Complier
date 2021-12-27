@@ -17,20 +17,29 @@ define dso_local i32 @main(){
     %7 = icmp slt i32 %5, %6
     br i1 %7,label %b2,label %b3
 b2:
-    %8 = load i32, i32* %3
-    %9 = add i32 %8, 1
-    store i32 %9, i32* %3
-    %10 = load i32, i32* %4
-    %11 = load i32, i32* %3
-    %12 = add i32 %10, %11
-    store i32 %12, i32* %4
-    %13 = load i32, i32* %4
-    call void @putint(i32 %13)
+    %8 = alloca i32
+    store i32 1, i32* %8
+    %9 = load i32, i32* %3
+    %10 = srem i32 %9, 2
+    %11 = icmp eq i32 %10, 0
+    br i1 %11,label %b4,label %b5
+b4:
+    br label %b2
+b5:
+    %12 = load i32, i32* %3
+    %13 = add i32 %12, 1
+    store i32 %13, i32* %3
+    %14 = load i32, i32* %4
+    %15 = load i32, i32* %3
+    %16 = add i32 %14, %15
+    store i32 %16, i32* %4
+    %17 = load i32, i32* %4
+    call void @putint(i32 %17)
     call void @putch(i32 10)
-    %14 = load i32, i32* %3
-    %15 = load i32, i32* %1
-    %16 = icmp slt i32 %14, %15
-    br i1 %16,label %b2,label %b3
+    %18 = load i32, i32* %3
+    %19 = load i32, i32* %1
+    %20 = icmp slt i32 %18, %19
+    br i1 %20,label %b2,label %b3
 b3:
     ret i32 0
 }
