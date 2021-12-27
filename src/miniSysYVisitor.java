@@ -196,6 +196,24 @@ public interface miniSysYVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitCondStatement(miniSysYParser.CondStatementContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link miniSysYParser#whileStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitWhileStatement(miniSysYParser.WhileStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link miniSysYParser#breakStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBreakStatement(miniSysYParser.BreakStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link miniSysYParser#continueStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitContinueStatement(miniSysYParser.ContinueStatementContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link miniSysYParser#cond}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

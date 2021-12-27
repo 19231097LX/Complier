@@ -319,6 +319,36 @@ public interface miniSysYListener extends ParseTreeListener {
 	 */
 	void exitCondStatement(miniSysYParser.CondStatementContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link miniSysYParser#whileStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterWhileStatement(miniSysYParser.WhileStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link miniSysYParser#whileStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitWhileStatement(miniSysYParser.WhileStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link miniSysYParser#breakStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterBreakStatement(miniSysYParser.BreakStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link miniSysYParser#breakStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitBreakStatement(miniSysYParser.BreakStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link miniSysYParser#continueStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterContinueStatement(miniSysYParser.ContinueStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link miniSysYParser#continueStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitContinueStatement(miniSysYParser.ContinueStatementContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link miniSysYParser#cond}.
 	 * @param ctx the parse tree
 	 */

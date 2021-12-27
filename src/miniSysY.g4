@@ -6,7 +6,7 @@ funcDef  : funcType Ident L_PAREN R_PAREN block;
 funcType : INT;
 block    : L_BRACE blockItem* R_BRACE;
 blockItem : stmt | decl;
-stmt     : retStatement|assignStatement|expStatement|condStatement|block;
+stmt     : retStatement|assignStatement|expStatement|condStatement|block|whileStatement|breakStatement|continueStatement;
 retStatement:RETURN exp SEMICOLON;
 assignStatement:lVal ASSIGN exp SEMICOLON;
 decl         : constDecl | varDecl;
@@ -37,6 +37,9 @@ primaryExp : L_PAREN exp R_PAREN #braces
             |lVal   #left
              ;
 condStatement:IF L_PAREN cond R_PAREN stmt ( ELSE stmt )?;
+whileStatement:WHILE L_PAREN cond R_PAREN stmt ;
+breakStatement:BREAK SEMICOLON;
+continueStatement:CONTINUE SEMICOLON;
 cond         : lOrExp ;
 relExp       : addExp
                 | relExp sign=(GR | LR | GE | LE) addExp ;// [new]
@@ -68,6 +71,9 @@ RETURN: 'return';
 SEMICOLON: ';';
 IF:'if';
 ELSE:'else';
+WHILE:'while';
+CONTINUE:'continue';
+BREAK:'break';
 NOT:'!';
 GR:'>';
 LR:'<';
