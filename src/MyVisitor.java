@@ -1,5 +1,7 @@
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 
 //部分错误类型声明
 //4——声明变量已存在   5——引用变量不存在  6——变量赋值类型不符合  7——调用函数不存在  8——全局变量赋值不为常量表达式。
@@ -20,6 +22,8 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     public int tablePtr = 0;//0为全局变量
     //保存库函数调用
     public HashMap<String, MyFunction> libFunctions = new HashMap<>();
+    private List<Integer> continueTos=new LinkedList<>();//用于记录接下来可能出现的 break 和 continue，。
+    private List<Integer> breakTos=new LinkedList<>();//在其出现以后生成一个临时的占位符，并将这个占位符的位置存储到容器中，在退出这个函数前遍历这个容器，将那些位置替换为正确的跳转
     public MyVisitor() {
         super();
         //初始化第一张符号表
@@ -576,7 +580,8 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 return reg;
         }
     }
-    @Override public String visitCondStatement(miniSysYParser.CondStatementContext ctx) {
+    @Override
+    public String visitCondStatement(miniSysYParser.CondStatementContext ctx) {
         System.out.println("visitCondStatement");
         int ifBlock;
         int deBlock;
@@ -639,8 +644,68 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         }
         else return null;
     }
-    @Override public String visitCond(miniSysYParser.CondContext ctx) {
+    @Override
+    public String visitCond(miniSysYParser.CondContext ctx) {
         System.out.println("visitCond");
         return visitChildren(ctx);
+    }
+    @Override
+    public String visitWhileStatement(miniSysYParser.WhileStatementContext ctx) {
+        System.out.println("visitWhileStatement");
+        int ifBlock;
+        int deBlock;
+        String llvm;
+        String reg;
+        String condReg = visit(ctx.cond());
+        ifBlock=++block;
+        deBlock=++block;
+        continueTos.add(ifBlock);
+        breakTos.add(deBlock);
+        if(this.type==32){
+            reg = this.regSign + register++;
+            llvm = "    " + reg + " = icmp ne i32 " + condReg + ",0\n";
+            this.content += llvm;
+        }
+        else {
+            reg = condReg;
+        }
+        this.type=32;
+        this.content +="    br i1 " +reg+ ",label %b" +ifBlock+ ",label %b" +deBlock+ "\n";
+        this.content +="b" +ifBlock+ ":\n";
+        visit(ctx.children.get(4));
+        if(!returned){
+            String condReg2 = visit(ctx.cond());
+            if(this.type==32){
+                reg = this.regSign + register++;
+                llvm = "    " + reg + " = icmp ne i32 " + condReg + ",0\n";
+                this.content += llvm;
+            }
+            else {
+                reg = condReg2;
+            }
+            this.type=32;
+            this.content +="    br i1 " +reg+ ",label %b" +ifBlock+ ",label %b" +deBlock+ "\n";
+        }
+        returned = false;
+        continueTos.remove(continueTos.size()-1);
+        breakTos.remove(breakTos.size()-1);
+        this.content +="b" +deBlock+ ":\n";
+        return null;
+    }
+    @Override
+    public String visitBreakStatement(miniSysYParser.BreakStatementContext ctx) {
+        System.out.println("visitBreakStatement");
+        if(breakTos.size()==0)
+            System.exit(8);
+        this.content +="    br label %b" +breakTos.get(breakTos.size()-1)+ "\n";
+        return null;
+    }
+    @Override
+    public String visitContinueStatement(miniSysYParser.ContinueStatementContext ctx) {
+        System.out.println("visitContinueStatement");
+        if(continueTos.size()==0)
+            System.exit(8);
+        this.content +="    br label %b" +continueTos.get(continueTos.size()-1)+ "\n";
+        return null;
     }
 }
