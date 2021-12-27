@@ -675,16 +675,17 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         visit(ctx.children.get(4));
         if(!returned){
             String condReg2 = visit(ctx.cond());
+            String reg2;
             if(this.type==32){
-                reg = this.regSign + register++;
-                llvm = "    " + reg + " = icmp ne i32 " + condReg2 + ",0\n";
+                reg2 = this.regSign + register++;
+                llvm = "    " + reg2 + " = icmp ne i32 " + condReg2 + ",0\n";
                 this.content += llvm;
             }
             else {
-                reg = condReg2;
+                reg2 = condReg2;
             }
             this.type=32;
-            this.content +="    br i1 " +reg+ ",label %b" +ifBlock+ ",label %b" +deBlock+ "\n";
+            this.content +="    br i1 " +reg2+ ",label %b" +ifBlock+ ",label %b" +deBlock+ "\n";
         }
         returned = false;
         continueTos.remove(continueTos.size()-1);
