@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 //部分错误类型声明
-//4——声明变量已存在   5——引用变量不存在  6——变量赋值类型不符合  7——调用函数不存在  8——全局变量赋值不为常量表达式。
+//4——声明变量已存在   5——引用变量不存在  6——变量赋值类型不符合  7——调用函数不存在  8——全局变量赋值不为常量表达式。 9--块跳转出错
 public class MyVisitor extends miniSysYBaseVisitor<String>{
     public int register = 1;//寄存器编号
     public String regSign = "%";//寄存器局部变量符号
@@ -388,7 +388,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             if(this.tablePtr==0){
                 String tmp2 = "";
                 tmp2 += ("@" + ctx.Ident().getText() + " = dso_local global i32 ");
-                //TODO 设置全局量isSettingGlobal的值并做处理。
                 this.isSettingGlobal = true;
                 String tmpValue = visit(ctx.constInitVal());
                 tmp2 += tmpValue + "\n";
@@ -444,7 +443,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             if(this.tablePtr==0){
                 String tmp2 = "";
                 tmp2 += ("@" + ctx.Ident().getText() + " = dso_local global i32 ");
-                //TODO 设置全局量isSettingGlobal的值并做处理。
                 if(ctx.initVal() != null) {
                     this.isSettingGlobal = true;
                     String tmpValue = visit(ctx.initVal());
@@ -455,7 +453,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                     tmp.setInit(true);
                     this.mapTable.get(this.tablePtr).put(IdentName, tmp);
                 }
-                //TODO  全局变量未初始化要主动赋值为0
                 else {
                     tmp2 +="0\n";
                     this.globalContent += tmp2;
@@ -699,7 +696,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     public String visitBreakStatement(miniSysYParser.BreakStatementContext ctx) {
         System.out.println("visitBreakStatement");
         if(breakTos.size()==0)
-            System.exit(8);
+            System.exit(9);
         this.content +="    br label %b" +breakTos.get(breakTos.size()-1)+ "\n";
         this.isBreak=true;
         return null;
@@ -708,7 +705,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     public String visitContinueStatement(miniSysYParser.ContinueStatementContext ctx) {
         System.out.println("visitContinueStatement");
         if(continueTos.size()==0)
-            System.exit(8);
+            System.exit(9);
         this.content +="    br label %b" +continueTos.get(continueTos.size()-1)+ "\n";
         this.isContinue=true;
         return null;

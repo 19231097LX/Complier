@@ -12,14 +12,15 @@ assignStatement:lVal ASSIGN exp SEMICOLON;
 decl         : constDecl | varDecl;
 constDecl    : CONST bType constDef (COMMA constDef)*';';
 bType        : INT;
-constDef     : Ident ASSIGN constInitVal;
-constInitVal : constExp;
+constDef     : Ident (L_BRACKET constExp R_BRACKET)* ASSIGN constInitVal;
+constInitVal : constExp
+               | L_BRACE ( constInitVal (COMMA constInitVal)* )? R_BRACE;
 constExp     : addExp;
-lVal         : Ident;
+lVal         : Ident (L_BRACKET exp R_BRACKET)*;
 varDecl      : bType varDef (COMMA varDef)* ';';
-varDef       : Ident
-                | Ident '=' initVal;
-initVal      : exp;
+varDef       : Ident (L_BRACKET constExp R_BRACKET)*
+                | Ident (L_BRACKET constExp R_BRACKET)* '=' initVal;
+initVal      : exp | L_BRACE ( initVal (COMMA initVal)* )? R_BRACE ;
 expStatement:exp? SEMICOLON;
 exp        : addExp;
 addExp     : addExp (ADD
@@ -63,6 +64,8 @@ L_PAREN: '(';
 R_PAREN: ')';
 L_BRACE: '{';
 R_BRACE: '}';
+L_BRACKET: '[';
+R_BRACKET: ']';
 INT: 'int';
 CONST:'const';
 COMMA:',';
