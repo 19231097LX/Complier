@@ -23,6 +23,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     private int ind=0;
     private int nodeValue = 0;//保存节点值
     public boolean isPriE = true;
+    public int expLevel = 0;
 
     //为了实现符号表的作用范围，使用arrayList来存储所有符号表，符号表本身用hashmap存储
     public ArrayList<HashMap<String, Item>> mapTable = new ArrayList<>();
@@ -406,6 +407,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 int lastR=this.register-1;
                 int retRegister=this.register;//返回的寄存器
                 for (int j=0;j<ctx.exp().size();j++){
+                    expLevel++;
                     String expReg=visit(ctx.exp(j));
                     num=1;
                     for(int k=j+1;k<ctx.exp().size();k++){
@@ -421,6 +423,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                     }
                     retRegister=this.register-1;//存放着保存着数组元素下标数组的地址
                     index+=num*nodeValue;
+                    expLevel--;
                 }
                 if(!tmp.cons) {
                     String reg1 = this.regSign + this.register++;
@@ -435,7 +438,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                         }
                     } else System.exit(8);
                     this.content += ",i32 0,i32 %" + retRegister + "\n";
-                    if(isPriE){
+                    if(isPriE||expLevel>0){
                         newReg = this.regSign + this.register++;
                         this.content += "    " + newReg + " = load i32, i32* " + reg1 + "\n";
                     }
