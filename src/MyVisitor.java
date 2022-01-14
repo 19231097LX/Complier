@@ -314,7 +314,9 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     public String visitPriE(miniSysYParser.PriEContext ctx) {
         System.out.println("visitPriE");
         isPriE=true;
-        return visitChildren(ctx);
+        String ret=visitChildren(ctx);
+        isPriE=false;
+        return ret;
     }
 
     //专门用于处理二元+-,只有UnaryOpExp的标识符为-才分配寄存器返回。否则返回对子节点的访问结果。
@@ -385,8 +387,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     @Override
     public String visitLVal(miniSysYParser.LValContext ctx) {
         System.out.println("visitLVal");
-        boolean tmpIsPriE=this.isPriE;
-        this.isPriE=false;
         String lval = ctx.Ident().getText();
         //从此层对应的符号表开始循环遍历之前的层直到找到对应的Item
         Item tmp = null;
@@ -436,9 +436,10 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                         }
                     } else System.exit(8);
                     this.content += ",i32 0,i32 %" + retRegister + "\n";
-                    if(tmpIsPriE){
+                    if(isPriE){
                         newReg = this.regSign + this.register++;
                         this.content += "    " + newReg + " = load i32, i32* " + reg1 + "\n";
+                        this.isPriE=false;
                     }
                     else newReg=reg1;
                     return newReg;
