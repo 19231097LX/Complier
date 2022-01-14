@@ -314,7 +314,9 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     public String visitPriE(miniSysYParser.PriEContext ctx) {
         System.out.println("visitPriE");
         isPriE=true;
-        return visitChildren(ctx);
+        String ret=visitChildren(ctx);
+        isPriE=false;
+        return ret;
     }
 
     //专门用于处理二元+-,只有UnaryOpExp的标识符为-才分配寄存器返回。否则返回对子节点的访问结果。
@@ -439,7 +441,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                         this.content += "    " + newReg + " = load i32, i32* " + reg1 + "\n";
                     }
                     else newReg=reg1;
-                    this.isPriE=false;
                     return newReg;
                 }
                 else if(tmp.cons){
@@ -480,6 +481,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 }
             } else System.exit(5);
         }
+
         return null;
     }
 
