@@ -17,6 +17,12 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     private boolean isBreak=false;//用于辅助判断条件跳转的输出
     private boolean isContinue=false;//用于辅助判断条件跳转的输出
     private boolean isSettingGlobal = false;
+    private List<Integer> initDimension=new LinkedList<>();//用于初始化数组变量纬度
+    private Item initArray=new Item();//用于初始化数组变量
+    private int tmpDime=0;//用于initArray
+    private int ind=0;
+    private int nodeValue = 0;//保存节点值
+    public boolean isPriE = false;
 
     //为了实现符号表的作用范围，使用arrayList来存储所有符号表，符号表本身用hashmap存储
     public ArrayList<HashMap<String, Item>> mapTable = new ArrayList<>();
@@ -49,12 +55,38 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         String Sputch = "declare void @putch(i32)\n";
         String Sgetarray = "declare i32 @getarray()\n";
         String Sputarray = "declare void @putarray(i32)\n";
+        String Smemset = "declare void @memset(i32*, i32, i32)\n";
         this.content += Sgetint;
         this.content += Sgetch;
         this.content += Sgetarray;
         this.content += Sputint;
         this.content += Sputch;
         this.content += Sputarray;
+        this.content += Smemset;
+    }
+    private void appendInitArrayV() {
+        int sum = initArray.values.size();
+        if (this.tablePtr == 0) {
+            this.globalContent+="[";
+            for (int j = 0; j < sum; j++) {
+                this.globalContent+=" i32 "+initArray.values.get(j);
+                if (j != sum - 1)
+                    this.globalContent+=",";
+            }
+            this.globalContent+="]\n";
+        }
+    }
+    private void appendInitArray(Item id,int demi){
+        int num=1;
+        for(int i=0;i<id.dimension.size();i++){
+            num*=id.dimension.get(i);
+        }
+        if(this.tablePtr==0) {
+            this.globalContent += " [ " + num + " x i32] ";
+        }
+        else {
+            this.content += " [ " + num + " x i32] ";
+        }
     }
     //编译器输出llvm
     public String getContent() {
@@ -133,7 +165,9 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         if (num.charAt(0) == '0' && num.length() >1 ) {
             if ( num.charAt(1) == 'x' || num.charAt(1) == 'X') rnum = Integer.valueOf(num.substring(2), 16);
             else rnum = Integer.valueOf(num.substring(1), 8);
+
         } else rnum = Integer.valueOf(num, 10);
+        nodeValue=rnum;
         return String.valueOf(rnum);
     }
     @Override
@@ -155,8 +189,19 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             case 1:
                 return visitChildren(ctx);
             default:
+                int numLhs,numRhs,numAns;
                 String lhs = visit(ctx.addExp());
+                numLhs = nodeValue;
                 String rhs = visit(ctx.mulExp());
+                numRhs = nodeValue;
+                if (ctx.ADD() != null) {
+                    numAns = numLhs + numRhs;
+                    nodeValue=numAns;
+                }
+                else {
+                    numAns = numLhs - numRhs;
+                    nodeValue=numAns;
+                }
                 if(!this.isSettingGlobal) {
                     String reg = this.regSign + register++;
                     String tmp;
@@ -169,15 +214,10 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                     return reg;
                 }
                 else {
-                    int numLhs,numRhs,numAns;
-                    numLhs = Integer.parseInt(lhs);
-                    numRhs = Integer.parseInt(rhs);
                     if (ctx.ADD() != null) {
-                        numAns = numLhs + numRhs;
                         return Integer.toString(numAns);
                     }
                     else {
-                        numAns = numLhs - numRhs;
                         return Integer.toString(numAns);
                     }
                 }
@@ -190,8 +230,21 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             case 1:
                 return visitChildren(ctx);
             default:
+                int numLhs,numRhs,numAns;
                 String lhs = visit(ctx.mulExp());
+                numLhs = nodeValue;
                 String rhs = visit(ctx.unaryExp());
+                numRhs = nodeValue;
+                if (ctx.MUL() != null) {
+                    numAns = numLhs * numRhs;
+                } else if (ctx.DIV() != null) {
+                    numAns = numLhs / numRhs;
+                }
+                // MOD 运算
+                else {
+                    numAns = numLhs % numRhs;
+                }
+                nodeValue=numAns;
                 if(!this.isSettingGlobal) {
                     String reg = this.regSign + register++;
                     String tmp;
@@ -208,19 +261,13 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                     return reg;
                 }
                 else {
-                    int numLhs,numRhs,numAns;
-                    numLhs = Integer.parseInt(lhs);
-                    numRhs = Integer.parseInt(rhs);
                     if (ctx.MUL() != null) {
-                        numAns = numLhs * numRhs;
                         return Integer.toString(numAns);
                     } else if (ctx.DIV() != null) {
-                        numAns = numLhs / numRhs;
                         return Integer.toString(numAns);
                     }
                     // MOD 运算
                     else {
-                        numAns = numLhs % numRhs;
                         return Integer.toString(numAns);
                     }
                 }
@@ -238,19 +285,27 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             if(tmp != null) break;
         }
         String llvm;
-        //TODO 处理给全局变量赋值。
         //先确认目标存在且不为常量
         if (tmp != null && !tmp.cons) {
             if (!tmp.isInit()) tmp.setInit(true);
-            if(tmp.getRegister().charAt(0) == '%') {
-                String expReg = visit(ctx.exp());
-                llvm = "    store i32 " + expReg + ", i32* " + tmp.register + "\n";
-                this.content += llvm;
+            if(tmp.dimension.size()==0) {
+                if (tmp.getRegister().charAt(0) == '%') {
+                    String expReg = visit(ctx.exp());
+                    llvm = "    store i32 " + expReg + ", i32* " + tmp.register + "\n";
+                    tmp.value = nodeValue;
+                    this.content += llvm;
+                } else {
+                    String expReg = visit(ctx.exp());
+                    llvm = "    store i32 " + expReg + ", i32* @" + tmp.name + "\n";
+                    tmp.value = nodeValue;
+                    this.content += llvm;
+                }
             }
             else {
+                String lvalReg=visit(ctx.lVal());
                 String expReg = visit(ctx.exp());
-                llvm = "    store i32 " + expReg + ", i32* @" + tmp.name + "\n";
-                this.content += llvm;
+                this.content = "    store i32 " + expReg + ", i32* " + lvalReg + "\n";
+                this.content+="\n";
             }
         } else System.exit(5);
         return null;
@@ -258,6 +313,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     @Override
     public String visitPriE(miniSysYParser.PriEContext ctx) {
         System.out.println("visitPriE");
+        isPriE=true;
         return visitChildren(ctx);
     }
 
@@ -270,6 +326,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             String reg = this.regSign + register++;
             String tmp = "    " + reg + " = sub i32 0, " + ret + "\n";
             this.content += tmp;
+            nodeValue = -nodeValue;
             return reg;
         }
         else if (ctx.sign.getType() == miniSysYParser.NOT){
@@ -279,6 +336,8 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             String reg2 = this.regSign + register++;
             String tmp2 = "    " + reg2 + " = zext i1 " + reg + " to i32\n";
             this.content += tmp2;
+            if(nodeValue!=0) nodeValue=0;
+            else nodeValue=1;
             return reg2;
         }
         return ret;
@@ -326,7 +385,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     @Override
     public String visitLVal(miniSysYParser.LValContext ctx) {
         System.out.println("visitLVal");
-        String lval = ctx.getText();
+        String lval = ctx.Ident().getText();
         //从此层对应的符号表开始循环遍历之前的层直到找到对应的Item
         Item tmp = null;
         for(int i=this.tablePtr;i>=0;i--){
@@ -334,28 +393,91 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             if(tmp != null) break;
         }
         String llvm;
-        //先确认目标存在且已经有初始化值
-        if (tmp != null && tmp.init) {
-            if(!this.isSettingGlobal) {
+        //使用数组元素赋值
+        if(tmp==null) System.exit(5);
+        if(tmp.values.size()!=0){
+            if(tmp.dimension.size()!=ctx.exp().size()){
+                System.exit(12);//维度不匹配
+            }else {
+                int index=0,num;
                 String newReg = this.regSign + this.register++;
-                if(tmp.getRegister().charAt(0) == '%') {
-                    llvm = "    " + newReg + " = load i32, i32* " + tmp.getRegister() + "\n";
-                    this.content += llvm;
-                    return newReg;
+                this.content += "    " + newReg + " = add i32 0,0\n";
+                int lastR=this.register-1;
+                int retRegister=this.register;//返回的寄存器
+                for (int j=0;j<ctx.exp().size();j++){
+                    String expReg=visit(ctx.exp(j));
+                    num=1;
+                    for(int k=j+1;k<ctx.exp().size();k++){
+                        num*=tmp.dimension.get(k);
+                    }
+                    if(!tmp.cons) {
+                        String reg1 = this.regSign + this.register++;
+                        this.content += "    " + reg1 + " = mul i32 " + num + "," + expReg + "\n";
+                        String reg2 = this.regSign + this.register++;
+                        String reg3 = this.regSign + (this.register - 2);
+                        this.content += "    " + reg2 + " = add i32 %" + lastR + "," + reg3 + "\n";
+                        lastR = this.register - 1;
+                    }
+                    retRegister=this.register-1;//存放着保存着数组元素下标数组的地址
+                    index+=num*nodeValue;
+                }
+                if(!tmp.cons) {
+                    String reg1 = this.regSign + this.register++;
+                    this.content += "    " + reg1 + " = getelementptr [ " + tmp.values.size() + " x i32],[" + tmp.values.size() + " x i32]* ";
+                    if (!this.isSettingGlobal) {
+                        if (tmp.getRegister().charAt(0) == '%') {
+                            llvm = tmp.register;
+                            this.content += llvm;
+                        } else {
+                            llvm = "@" + tmp.name;
+                            this.content += llvm;
+                        }
+                    } else System.exit(8);
+                    this.content += ",i32 0,i32 %" + retRegister + "\n";
+                    if(isPriE){
+                        newReg = this.regSign + this.register++;
+                        this.content += "    " + newReg + " = load i32, i32* " + reg1 + "\n";
+                    }
+                    else newReg=reg1;
+                }
+                else if(tmp.cons){
+                    //TODO 常量数组的取值
+                    nodeValue=tmp.values.get(index);
+//                    String tmpReg = this.regSign + this.register++;
+//                    this.content += "    store i32 " + nodeValue + ", i32* " + tmpReg + "\n";
+                    newReg = Integer.toString(nodeValue);
+                    this.content += "    useconst数组" + "\n";
+                }
+                return newReg;
+            }
+        }
+        else{
+            //先确认目标存在且已经有初始化值
+            if (tmp != null && tmp.init) {
+                if(!this.isSettingGlobal) {
+                    String newReg = this.regSign + this.register++;
+                    if(tmp.getRegister().charAt(0) == '%') {
+                        llvm = "    " + newReg + " = load i32, i32* " + tmp.getRegister() + "\n";
+                        this.content += llvm;
+                        nodeValue=tmp.value;
+                        return newReg;
+                    }
+                    else {
+                        llvm = "    " + newReg + " = load i32, i32* @" + tmp.name + "\n";
+                        this.content += llvm;
+                        nodeValue=tmp.value;
+                        return newReg;
+                    }
                 }
                 else {
-                    llvm = "    " + newReg + " = load i32, i32* @" + tmp.name + "\n";
-                    this.content += llvm;
-                    return newReg;
+                    if(tmp.cons) {
+                        nodeValue=tmp.value;
+                        return tmp.getRegister();
+                    }
+                    else System.exit(8);
                 }
-            }
-            else {
-                if(tmp.cons) {
-                    return tmp.getRegister();
-                }
-                else System.exit(8);
-            }
-        } else System.exit(5);
+            } else System.exit(5);
+        }
         return null;
     }
 
@@ -385,38 +507,109 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         //先确认目标不存在 这里是为了区分以后的全局变量和局部变量都不重名
 //        if (!this.mapTable.get(this.tablePtr).containsKey(IdentName) && !this.mapTable.get(0).containsKey(IdentName) ) {
         if (!this.mapTable.get(this.tablePtr).containsKey(IdentName)) {
-            if(this.tablePtr==0){
-                String tmp2 = "";
-                tmp2 += ("@" + ctx.Ident().getText() + " = dso_local global i32 ");
-                this.isSettingGlobal = true;
-                String tmpValue = visit(ctx.constInitVal());
-                tmp2 += tmpValue + "\n";
-                this.globalContent += tmp2;
-                this.isSettingGlobal = false;
-                tmp = new Item(IdentName, tmpValue, true, true, "i32");
-                tmp.setInit(true);
-                this.mapTable.get(this.tablePtr).put(IdentName, tmp);
+            if(ctx.constExp().size()==0) {
+                if (this.tablePtr == 0) {
+                    String tmp2 = "";
+                    tmp2 += ("@" + ctx.Ident().getText() + " = dso_local global i32 ");
+                    this.isSettingGlobal = true;
+                    String tmpValue = visit(ctx.constInitVal());
+                    tmp2 += tmpValue + "\n";
+                    this.globalContent += tmp2;
+                    this.isSettingGlobal = false;
+                    tmp = new Item(IdentName, tmpValue, true, true, "i32");
+                    tmp.setInit(true);
+                    tmp.value = nodeValue;
+                    this.mapTable.get(this.tablePtr).put(IdentName, tmp);
+                } else {
+                    String newReg = this.regSign + this.register++;
+                    //输出llvm代码alloca
+                    llvm = "    " + newReg + " = alloca i32\n";
+                    this.content += llvm;
+                    tmp = new Item(IdentName, newReg, true, true, "i32");
+                    tmp.setInit(true);
+                    this.mapTable.get(this.tablePtr).put(IdentName, tmp);
+                    String expReg = visit(ctx.constInitVal());
+                    llvm = "    store i32 " + expReg + ", i32* " + newReg + "\n";
+                    tmp.value = nodeValue;
+                    this.content += llvm;
+                }
             }
             else {
-                String newReg = this.regSign + this.register++;
-                //输出llvm代码alloca
-                llvm = "    " + newReg + " = alloca i32\n";
-                this.content += llvm;
-                tmp = new Item(IdentName, newReg, true, true, "i32");
-                tmp.setInit(true);
+                int num=1;
+                tmp = new Item(IdentName, "", true, false, "i32");
                 this.mapTable.get(this.tablePtr).put(IdentName, tmp);
-                String expReg = visit(ctx.constInitVal());
-                llvm = "    store i32 " + expReg + ", i32* " + newReg + "\n";
-                this.content += llvm;
+                for (int j=0;j<ctx.constExp().size();j++){
+                    this.isSettingGlobal = true;
+                    String demiReg=visit(ctx.constExp(j));
+                    this.isSettingGlobal = false;
+                    int demi=Integer.parseInt(demiReg);
+                    if(demi<=0){
+                        System.exit(10);//数组维度为非正数
+                    }
+                    tmp.dimension.add(demi);
+                    num*=demi;
+                }
+                for(int j=0;j<num;j++){
+                    tmp.values.add(0);
+                }
+                initArray=tmp;
+                for(int i=0;i<initArray.dimension.size();i++){
+                    initDimension.add(0);
+                }
+                if(this.tablePtr == 0) {
+                    this.isSettingGlobal=true;
+                    visit(ctx.constInitVal());
+                    this.isSettingGlobal=false;
+                }
+                else visit(ctx.constInitVal());
+                initArray=new Item();
+                initDimension=new LinkedList<>();
             }
         } else System.exit(4);
+        this.tmpDime=0;
         return null;
     }
 
     @Override
     public String visitConstInitVal(miniSysYParser.ConstInitValContext ctx) {
         System.out.println("visitConstInitVal");
-        return visitChildren(ctx);
+        if(ctx.children.size()==1){
+            String expReg=visit(ctx.constExp());
+            //TODO 是否要加@?
+            if(this.tablePtr==0&&(expReg.charAt(0)=='%'||expReg.charAt(0)=='@')){
+                System.exit(11);
+            }
+            if(initDimension.size()!=0){
+                int index=0;
+                for (int j=0;j<initDimension.size()-1;j++){
+                    int num=1;
+                    for (int k=j+1;k<initDimension.size();k++){
+                        num*=initArray.dimension.get(k);
+                    }
+                    index+=num*initDimension.get(j);
+                }
+                initArray.values.remove(index+ind);
+                initArray.values.add(index+ind,nodeValue);
+            }
+        }else {
+            int i;
+            tmpDime++;
+            for(i=0;i<ctx.constInitVal().size();i++) {
+                ind = i;
+                visit(ctx.constInitVal(i));
+                if (ctx.constInitVal(i).children.size() != 1)
+                    tmpDime--;
+                int tmp = initDimension.get(tmpDime - 1);
+                initDimension.remove(tmpDime - 1);
+                initDimension.add(tmpDime - 1, tmp + 1);
+                for (int j = tmpDime; j < initDimension.size(); j++) {
+                    initDimension.remove(j);
+                    initDimension.add(j, 0);
+                }
+                ind = 0;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -440,59 +633,164 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         //先确认目标不存在 这里是为了区分以后的全局变量和局部变量都不重名
 //        if (!this.mapTable.get(this.tablePtr).containsKey(IdentName) && !this.mapTable.get(0).containsKey(IdentName) ) {
         if (!this.mapTable.get(this.tablePtr).containsKey(IdentName)) {
-            if(this.tablePtr==0){
-                String tmp2 = "";
-                tmp2 += ("@" + ctx.Ident().getText() + " = dso_local global i32 ");
-                if(ctx.initVal() != null) {
-                    this.isSettingGlobal = true;
-                    String tmpValue = visit(ctx.initVal());
-                    tmp2 += tmpValue + "\n";
-                    this.globalContent += tmp2;
-                    this.isSettingGlobal = false;
-                    tmp = new Item(IdentName, tmpValue, false, true, "i32");
-                    tmp.setInit(true);
-                    this.mapTable.get(this.tablePtr).put(IdentName, tmp);
-                }
-                else {
-                    tmp2 +="0\n";
-                    this.globalContent += tmp2;
-                    tmp = new Item(IdentName, "0", false, true, "i32");
-                    tmp.setInit(true);
-                    this.mapTable.get(this.tablePtr).put(IdentName, tmp);
+            if(ctx.constExp().size()==0) {
+                if (this.tablePtr == 0) {
+                    String tmp2 = "";
+                    tmp2 += ("@" + ctx.Ident().getText() + " = dso_local global i32 ");
+                    if (ctx.initVal() != null) {
+                        this.isSettingGlobal = true;
+                        String tmpValue = visit(ctx.initVal());
+                        tmp2 += tmpValue + "\n";
+                        this.globalContent += tmp2;
+                        this.isSettingGlobal = false;
+                        tmp = new Item(IdentName, tmpValue, false, true, "i32");
+                        tmp.setInit(true);
+                        tmp.value=nodeValue;
+                        this.mapTable.get(this.tablePtr).put(IdentName, tmp);
+                    } else {
+                        tmp2 += "0\n";
+                        this.globalContent += tmp2;
+                        tmp = new Item(IdentName, "0", false, true, "i32");
+                        tmp.setInit(true);
+                        tmp.value=0;
+                        this.mapTable.get(this.tablePtr).put(IdentName, tmp);
+                    }
+                } else {
+                    String newReg;
+                    //判断是否要进行初始化
+                    if (ctx.initVal() != null) {
+                        newReg = this.regSign + this.register++;
+                        //输出llvm代码alloca
+                        llvm = "    " + newReg + " = alloca i32\n";
+                        this.content += llvm;
+                        tmp = new Item(IdentName, newReg, false, true, "i32");
+                        tmp.setInit(true);
+                        this.mapTable.get(this.tablePtr).put(IdentName, tmp);
+                        String expReg = visit(ctx.initVal());
+                        tmp.value=nodeValue;
+                        llvm = "    store i32 " + expReg + ", i32* " + newReg + "\n";
+                        this.content += llvm;
+                        //add item
+                    } else {
+                        newReg = this.regSign + this.register++;
+                        tmp = new Item(IdentName, newReg, false, false, "i32");
+                        tmp.setInit(false);
+                        this.mapTable.get(this.tablePtr).put(IdentName, tmp);
+                        //输出llvm代码alloca
+                        llvm = "    " + newReg + " = alloca i32\n";
+                        this.content += llvm;
+                    }
                 }
             }
-            else {
-                String newReg;
-                //判断是否要进行初始化
-                if (ctx.initVal() != null) {
-                    newReg = this.regSign + this.register++;
-                    //输出llvm代码alloca
-                    llvm = "    " + newReg + " = alloca i32\n";
-                    this.content += llvm;
-                    tmp = new Item(IdentName, newReg, false, true, "i32");
-                    tmp.setInit(true);
-                    this.mapTable.get(this.tablePtr).put(IdentName, tmp);
-                    String expReg = visit(ctx.initVal());
-                    llvm = "    store i32 " + expReg + ", i32* " + newReg + "\n";
-                    this.content += llvm;
-                    //add item
-                } else {
-                    newReg = this.regSign + this.register++;
-                    tmp = new Item(IdentName, newReg, false, false, "i32");
-                    tmp.setInit(false);
-                    this.mapTable.get(this.tablePtr).put(IdentName, tmp);
-                    //输出llvm代码alloca
-                    llvm = "    " + newReg + " = alloca i32\n";
-                    this.content += llvm;
+            else{
+                int num=1;
+                tmp = new Item(IdentName, "", false, false, "i32");
+                this.mapTable.get(this.tablePtr).put(IdentName, tmp);
+                for (int j=0;j<ctx.constExp().size();j++){
+                    this.isSettingGlobal = true;
+                    String demiReg=visit(ctx.constExp(j));
+                    this.isSettingGlobal = false;
+                    int demi=Integer.parseInt(demiReg);
+                    if(demi<=0){
+                        System.exit(10);//数组维度为非正数
+                    }
+                    tmp.dimension.add(demi);
+                    num*=demi;
+                }
+                for(int j=0;j<num;j++){
+                    tmp.values.add(0);
+                }
+                if (this.tablePtr == 0) {
+                    tmp.register="@"+tmp.name;
+                    this.globalContent += "@" + ctx.Ident().getText() + " = dso_local global i32 ";
+                    initArray=tmp;
+                    appendInitArray(tmp,0);
+                    if(ctx.initVal()!=null){
+                        for(int i=0;i<initArray.dimension.size();i++){
+                            initDimension.add(0);
+                        }
+                        visit(ctx.initVal());//会将数组的初始化值填入initArray.values中
+                        appendInitArrayV();
+                        initArray=new Item();
+                        initDimension=new LinkedList<>();
+                    }else{
+                        this.globalContent+=" zeroinitializer\n";
+                    }
+                }else {
+                    String newReg = this.regSign + this.register++;
+                    tmp.register = newReg;
+                    initArray=tmp;
+                    this.content+= "    "+newReg+" = alloca ";
+                    appendInitArray(tmp,0);
+                    this.content+="\n";
+                    String reg1 = this.regSign + this.register++;
+                    this.content+="    "+reg1+" = getelementptr ["+tmp.values.size()+" x i32],["+tmp.values.size()+" x i32]* "+tmp.register+",i32 0,i32 0\n";
+                    this.content+="    call void @memset(i32* %"+(this.register-1)+", i32 0, i32 "+4*tmp.values.size()+")\n";
+                    if(ctx.initVal()!=null){
+                        for(int i=0;i<initArray.dimension.size();i++){
+                            initDimension.add(0);
+                        }
+                        visit(ctx.initVal());
+                        appendInitArrayV();
+                        initArray=new Item();
+                        initDimension=new LinkedList<>();
+                    }
                 }
             }
         } else System.exit(4);
-        return null; }
+        this.tmpDime=0;
+        return null;
+    }
 
     @Override
     public String visitInitVal(miniSysYParser.InitValContext ctx) {
         System.out.println("visitInitVal");
-        return visitChildren(ctx);
+        if(ctx.children.size()==1){
+            String expReg=visit(ctx.exp());
+            //TODO 是否要加@?
+            if(this.tablePtr==0&&(expReg.charAt(0)=='%'||expReg.charAt(0)=='@')){
+                System.exit(11);
+            }
+            if(initDimension.size()!=0){
+                int index=0;
+                for (int j=0;j<initDimension.size()-1;j++){
+                    int num=1;
+                    for (int k=j+1;k<initDimension.size();k++){
+                        num*=initArray.dimension.get(k);
+                    }
+                    index+=num*initDimension.get(j);
+                }
+                index+=ind;
+                if(this.tablePtr!=0){
+                    String reg1 = this.regSign+this.register++;
+                    this.content+="    "+reg1+"= getelementptr ["+initArray.values.size()+" x i32],["+initArray.values.size()+" x i32]* ";
+                    this.content+=initArray.register;
+                    this.content+=",i32 0,i32 "+index+"\n";
+                    this.content+="    store i32 "+expReg+", i32* "+reg1+"\n";
+                }
+                initArray.values.remove(index);
+                initArray.values.add(index,nodeValue);
+            }
+        }else {
+            int i;
+            tmpDime++;
+            for(i=0;i<ctx.initVal().size();i++) {
+                ind = i;
+                visit(ctx.initVal(i));
+                if (ctx.initVal(i).children.size() != 1)
+                    tmpDime--;
+                int tmp = initDimension.get(tmpDime - 1);
+                initDimension.remove(tmpDime - 1);
+                initDimension.add(tmpDime - 1, tmp + 1);
+                for (int j = tmpDime; j < initDimension.size(); j++) {
+                    initDimension.remove(j);
+                    initDimension.add(j, 0);
+                }
+                ind = 0;
+            }
+        }
+        return null;
+        //return visitChildren(ctx);
     }
     @Override
     public String visitRelExp(miniSysYParser.RelExpContext ctx) {
