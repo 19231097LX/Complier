@@ -877,11 +877,28 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             case 1:
                 return visitChildren(ctx);
             default:
+                String regL,regR;
                 String lhs = visit(ctx.lAndExp());
+                if(this.type==32){
+                    regL = this.regSign + register++;
+                    this.content += "    " + regL + " = icmp ne i32 " + lhs + ",0\n";
+                }
+                else {
+                    regL = lhs;
+                }
+                this.type=32;
                 String rhs = visit(ctx.eqExp());
+                if(this.type==32){
+                    regR = this.regSign + register++;
+                    this.content += "    " + regR + " = icmp ne i32 " + rhs + ",0\n";
+                }
+                else {
+                    regR = rhs;
+                }
+                this.type=32;
                 String reg = this.regSign + register++;
                 String tmp = "";
-                tmp = "    " + reg + " = and i1 " + lhs + ", " + rhs + "\n";
+                tmp = "    " + reg + " = and i1 " + regL + ", " + regR + "\n";
                 this.content += tmp;
                 return reg;
         }
