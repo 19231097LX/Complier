@@ -324,25 +324,39 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     public String visitUnaryOpExp(miniSysYParser.UnaryOpExpContext ctx) {
         System.out.println("visitUnaryOpExp");
         String ret = visit(ctx.unaryExp());
-        if (ctx.sign.getType() == miniSysYParser.SUB) {
-            String reg = this.regSign + register++;
-            String tmp = "    " + reg + " = sub i32 0, " + ret + "\n";
-            this.content += tmp;
-            nodeValue = -nodeValue;
-            return reg;
+        if(isSettingGlobal){
+            String retS=ret;
+            if (ctx.sign.getType() == miniSysYParser.SUB) {
+                retS = "-"+ret;
+                nodeValue = -nodeValue;
+            }
+            else if (ctx.sign.getType() == miniSysYParser.NOT) {
+                retS = "!"+ret;
+                if (nodeValue != 0) nodeValue = 0;
+                else nodeValue = 1;
+            }
+            return retS;
         }
-        else if (ctx.sign.getType() == miniSysYParser.NOT){
-            String reg = this.regSign + register++;
-            String tmp = "    " + reg + " = icmp eq i32 " + ret + ",0\n";
-            this.content += tmp;
-            String reg2 = this.regSign + register++;
-            String tmp2 = "    " + reg2 + " = zext i1 " + reg + " to i32\n";
-            this.content += tmp2;
-            if(nodeValue!=0) nodeValue=0;
-            else nodeValue=1;
-            return reg2;
+        else {
+            if (ctx.sign.getType() == miniSysYParser.SUB) {
+                String reg = this.regSign + register++;
+                String tmp = "    " + reg + " = sub i32 0, " + ret + "\n";
+                this.content += tmp;
+                nodeValue = -nodeValue;
+                return reg;
+            } else if (ctx.sign.getType() == miniSysYParser.NOT) {
+                String reg = this.regSign + register++;
+                String tmp = "    " + reg + " = icmp eq i32 " + ret + ",0\n";
+                this.content += tmp;
+                String reg2 = this.regSign + register++;
+                String tmp2 = "    " + reg2 + " = zext i1 " + reg + " to i32\n";
+                this.content += tmp2;
+                if (nodeValue != 0) nodeValue = 0;
+                else nodeValue = 1;
+                return reg2;
+            }
+            return ret;
         }
-        return ret;
     }
     //处理调用的库函数
     @Override
@@ -582,9 +596,9 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         if(ctx.children.size()==1){
             String expReg=visit(ctx.constExp());
             //TODO 是否要加@?
-//            if(this.tablePtr==0&&(expReg.charAt(0)=='%')){
-//                System.exit(11);
-//            }
+            if(this.tablePtr==0&&(expReg.charAt(0)=='%'||expReg.charAt(0)=='@')){
+                System.exit(11);
+            }
             if(initDimension.size()!=0){
                 int index=0;
                 for (int j=0;j<initDimension.size()-1;j++){
@@ -597,6 +611,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 initArray.values.remove(index+ind);
                 initArray.values.add(index+ind,nodeValue);
             }
+            return expReg;
         }else {
             int i;
             tmpDime++;
@@ -756,9 +771,9 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         if(ctx.children.size()==1){
             String expReg=visit(ctx.exp());
             //TODO 是否要加@?
-//            if(this.tablePtr==0&&(expReg.charAt(0)=='%')){
-//                System.exit(11);
-//            }
+            if(this.tablePtr==0&&(expReg.charAt(0)=='%'||expReg.charAt(0)=='@')){
+                System.exit(11);
+            }
             if(initDimension.size()!=0){
                 int index=0;
                 for (int j=0;j<initDimension.size()-1;j++){
