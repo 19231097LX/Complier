@@ -24,7 +24,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     private int nodeValue = 0;//保存节点值
     public boolean isPriE = true;
     public int expLevel = 0;
-    public int isAnd=0;
 
     //为了实现符号表的作用范围，使用arrayList来存储所有符号表，符号表本身用hashmap存储
     public ArrayList<HashMap<String, Item>> mapTable = new ArrayList<>();
@@ -456,11 +455,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                     if(isPriE||expLevel>0){
                         newReg = this.regSign + this.register++;
                         this.content += "    " + newReg + " = load i32, i32* " + reg1 + "\n";
-                        if(this.isAnd>0){
-                            String reg2=this.regSign + this.register++;
-                            this.content += "    " + reg2 + " = zext i32 " + newReg + " to i1\n";
-                            newReg=reg2;
-                        }
                     }
                     else newReg=reg1;
                     return newReg;
@@ -883,14 +877,22 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             case 1:
                 return visitChildren(ctx);
             default:
-                this.isAnd++;
                 String lhs = visit(ctx.lAndExp());
+                if(this.type==1){
+                    String tmpReg=this.regSign + register++;
+                    this.content += "    " + tmpReg + " = zext i1 " + lhs + " to i32\n";
+                    lhs = tmpReg;
+                }
                 String rhs = visit(ctx.eqExp());
+                if(this.type==1){
+                    String tmpReg=this.regSign + register++;
+                    this.content += "    " + tmpReg + " = zext i1 " + rhs + " to i32\n";
+                    rhs = tmpReg;
+                }
                 String reg = this.regSign + register++;
                 String tmp = "";
-                tmp = "    " + reg + " = and i1 " + lhs + ", " + rhs + "\n";
+                tmp = "    " + reg + " = and i32 " + lhs + ", " + rhs + "\n";
                 this.content += tmp;
-                this.isAnd--;
                 return reg;
         }
     }
