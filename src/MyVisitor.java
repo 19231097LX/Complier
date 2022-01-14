@@ -536,7 +536,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             }
             else {
                 int num=1;
-                tmp = new Item(IdentName, "", true, false, "i32");
+                tmp = new Item(IdentName, "", true, true, "i32");
                 this.mapTable.get(this.tablePtr).put(IdentName, tmp);
                 for (int j=0;j<ctx.constExp().size();j++){
                     this.isSettingGlobal = true;
@@ -562,6 +562,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                     this.isSettingGlobal=false;
                 }
                 else visit(ctx.constInitVal());
+                tmp.init=true;
                 initArray=new Item();
                 initDimension=new LinkedList<>();
             }
@@ -711,6 +712,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                         }
                         visit(ctx.initVal());//会将数组的初始化值填入initArray.values中
                         appendInitArrayV();
+                        tmp.setInit(true);
                         initArray=new Item();
                         initDimension=new LinkedList<>();
                     }else{
@@ -727,6 +729,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                     this.content+="    "+reg1+" = getelementptr ["+tmp.values.size()+" x i32],["+tmp.values.size()+" x i32]* "+tmp.register+",i32 0,i32 0\n";
                     this.content+="    call void @memset(i32* %"+(this.register-1)+", i32 0, i32 "+4*tmp.values.size()+")\n";
                     if(ctx.initVal()!=null){
+                        tmp.setInit(true);
                         for(int i=0;i<initArray.dimension.size();i++){
                             initDimension.add(0);
                         }
