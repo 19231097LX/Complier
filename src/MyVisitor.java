@@ -277,7 +277,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     @Override
     public String visitAssignStatement(miniSysYParser.AssignStatementContext ctx) {
         System.out.println("visitAssignStatement");
-        String lval = ctx.lVal().getText();
+        String lval = ctx.lVal().Ident().getText();
         //从此层对应的符号表开始循环遍历之前的层直到找到对应的Item
         Item tmp = null;
         for(int i=this.tablePtr;i>=0;i--){
