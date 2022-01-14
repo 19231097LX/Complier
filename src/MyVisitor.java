@@ -582,9 +582,9 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         if(ctx.children.size()==1){
             String expReg=visit(ctx.constExp());
             //TODO 是否要加@?
-            if(this.tablePtr==0&&(expReg.charAt(0)=='%')){
-                System.exit(11);
-            }
+//            if(this.tablePtr==0&&(expReg.charAt(0)=='%')){
+//                System.exit(11);
+//            }
             if(initDimension.size()!=0){
                 int index=0;
                 for (int j=0;j<initDimension.size()-1;j++){
@@ -756,9 +756,9 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         if(ctx.children.size()==1){
             String expReg=visit(ctx.exp());
             //TODO 是否要加@?
-            if(this.tablePtr==0&&(expReg.charAt(0)=='%')){
-                System.exit(11);
-            }
+//            if(this.tablePtr==0&&(expReg.charAt(0)=='%')){
+//                System.exit(11);
+//            }
             if(initDimension.size()!=0){
                 int index=0;
                 for (int j=0;j<initDimension.size()-1;j++){
