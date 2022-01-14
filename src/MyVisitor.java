@@ -882,16 +882,19 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                     String tmpReg=this.regSign + register++;
                     this.content += "    " + tmpReg + " = zext i1 " + lhs + " to i32\n";
                     lhs = tmpReg;
+                    this.type=32;
                 }
                 String rhs = visit(ctx.eqExp());
                 if(this.type==1){
                     String tmpReg=this.regSign + register++;
                     this.content += "    " + tmpReg + " = zext i1 " + rhs + " to i32\n";
                     rhs = tmpReg;
+                    this.type=32;
                 }
                 String reg = this.regSign + register++;
                 String tmp = "";
                 tmp = "    " + reg + " = and i32 " + lhs + ", " + rhs + "\n";
+                this.type=32;
                 this.content += tmp;
                 return reg;
         }
@@ -908,7 +911,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 String rhs = visit(ctx.lAndExp());
                 String reg = this.regSign + register++;
                 String tmp = "";
-                tmp = "    " + reg + " = or i1 " + lhs + ", " + rhs + "\n";
+                tmp = "    " + reg + " = or i32 " + lhs + ", " + rhs + "\n";
                 this.content += tmp;
                 return reg;
         }
