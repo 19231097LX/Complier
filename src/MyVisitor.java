@@ -82,10 +82,10 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             num*=id.dimension.get(i);
         }
         if(this.tablePtr==0) {
-            this.globalContent += " [ " + num + " x i32] ";
+            this.globalContent += " [" + num + " x i32] ";
         }
         else {
-            this.content += " [ " + num + " x i32] ";
+            this.content += " [" + num + " x i32] ";
         }
     }
     //编译器输出llvm
@@ -423,7 +423,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 }
                 if(!tmp.cons) {
                     String reg1 = this.regSign + this.register++;
-                    this.content += "    " + reg1 + " = getelementptr [ " + tmp.values.size() + " x i32],[" + tmp.values.size() + " x i32]* ";
+                    this.content += "    " + reg1 + " = getelementptr [" + tmp.values.size() + " x i32],[" + tmp.values.size() + " x i32]* ";
                     if (!this.isSettingGlobal) {
                         if (tmp.getRegister().charAt(0) == '%') {
                             llvm = tmp.register;
