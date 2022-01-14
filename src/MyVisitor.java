@@ -756,7 +756,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
         if(ctx.children.size()==1){
             String expReg=visit(ctx.exp());
             //TODO 是否要加@?
-            if(this.tablePtr==0&&(expReg.charAt(0)=='%'||expReg.charAt(0)=='@')){
+            if(this.tablePtr==0&&(expReg.charAt(0)=='%')){
                 System.exit(11);
             }
             if(initDimension.size()!=0){
