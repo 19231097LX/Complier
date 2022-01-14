@@ -703,7 +703,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 }
                 if (this.tablePtr == 0) {
                     tmp.register="@"+tmp.name;
-                    this.globalContent += "@" + ctx.Ident().getText() + " = dso_local global i32 ";
+                    this.globalContent += "@" + ctx.Ident().getText() + " = dso_local global ";
                     initArray=tmp;
                     appendInitArray(tmp,0);
                     if(ctx.initVal()!=null){
