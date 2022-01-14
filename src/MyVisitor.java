@@ -304,7 +304,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
             else {
                 String lvalReg=visit(ctx.lVal());
                 String expReg = visit(ctx.exp());
-                this.content = "    store i32 " + expReg + ", i32* " + lvalReg + "\n";
+                this.content+= "    store i32 " + expReg + ", i32* " + lvalReg + "\n";
                 this.content+="\n";
             }
         } else System.exit(5);
