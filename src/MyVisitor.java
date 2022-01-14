@@ -22,7 +22,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     private int tmpDime=0;//用于initArray
     private int ind=0;
     private int nodeValue = 0;//保存节点值
-    public boolean isPriE = false;
+    public boolean isPriE = true;
 
     //为了实现符号表的作用范围，使用arrayList来存储所有符号表，符号表本身用hashmap存储
     public ArrayList<HashMap<String, Item>> mapTable = new ArrayList<>();
@@ -302,10 +302,11 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 }
             }
             else {
-                String lvalReg=visit(ctx.lVal());
+                this.isPriE=false;
+                String lvalReg= visit(ctx.lVal());
+                this.isPriE=true;
                 String expReg = visit(ctx.exp());
                 this.content+= "    store i32 " + expReg + ", i32* " + lvalReg + "\n";
-                this.content+="\n";
             }
         } else System.exit(5);
         return null;
@@ -313,9 +314,7 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
     @Override
     public String visitPriE(miniSysYParser.PriEContext ctx) {
         System.out.println("visitPriE");
-        isPriE=true;
         String ret=visitChildren(ctx);
-        isPriE=false;
         return ret;
     }
 
@@ -439,7 +438,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                     if(isPriE){
                         newReg = this.regSign + this.register++;
                         this.content += "    " + newReg + " = load i32, i32* " + reg1 + "\n";
-                        this.isPriE=false;
                     }
                     else newReg=reg1;
                     return newReg;
@@ -450,7 +448,6 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
 //                    String tmpReg = this.regSign + this.register++;
 //                    this.content += "    store i32 " + nodeValue + ", i32* " + tmpReg + "\n";
                     newReg = Integer.toString(nodeValue);
-                    this.content += "    useconst数组" + "\n";
                 }
                 return newReg;
             }
