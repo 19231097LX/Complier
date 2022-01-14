@@ -439,6 +439,8 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                         this.content += "    " + newReg + " = load i32, i32* " + reg1 + "\n";
                     }
                     else newReg=reg1;
+                    this.isPriE=false;
+                    return newReg;
                 }
                 else if(tmp.cons){
                     //TODO 常量数组的取值
@@ -773,6 +775,9 @@ public class MyVisitor extends miniSysYBaseVisitor<String>{
                 }
                 initArray.values.remove(index);
                 initArray.values.add(index,nodeValue);
+            }
+            else {
+                return expReg;
             }
         }else {
             int i;
